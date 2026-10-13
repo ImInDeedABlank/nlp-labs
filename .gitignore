@@ -1,0 +1,17 @@
+# the local virtual environment for these labs (Python 3.13, several GB)
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# OS
+Thumbs.db
+.DS_Store
