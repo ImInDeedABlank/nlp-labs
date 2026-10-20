@@ -1,6 +1,6 @@
-"""Execute the eight lab notebooks headlessly, keeping the outputs.
+"""Execute the nine lab notebooks headlessly, keeping the outputs.
 
-    python tools/run_notebooks.py              # all eight, in order
+    python tools/run_notebooks.py              # all nine, in order
     python tools/run_notebooks.py NLP_Lab5     # just one
 
 Run it with the environment's own interpreter, e.g.
@@ -26,7 +26,7 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 # so those two need room. The rest finish in under a minute.
 TIMEOUTS = {"NLP_Lab7": 3600, "NLP_Lab5": 3600, "NLP_Lab3": 2400, "NLP_Lab4": 2400}
 
-wanted = sys.argv[1:] or [f"NLP_Lab{i}" for i in range(1, 9)]
+wanted = sys.argv[1:] or [f"NLP_Lab{i}" for i in range(1, 10)]
 
 failed = 0
 for lab in wanted:

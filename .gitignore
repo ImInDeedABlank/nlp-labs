@@ -12,6 +12,9 @@ __pycache__/
 .ipynb_checkpoints/
 *.nbconvert.ipynb
 
+# Lab 9 saves a trained model next to its notebook; the notebook rebuilds it
+NLP_Lab9/custom_ner_model/
+
 # OS
 Thumbs.db
 .DS_Store

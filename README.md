@@ -1,8 +1,8 @@
 # NLP labs — ARTI 501
 
-Eight lab notebooks with every task cell filled in and executed. These are the labs from
+Nine lab notebooks with every task cell filled in and executed. These are the labs from
 Natural Language Processing (ARTI 501), cloned from `github.com/MohammedMosuily/NLP_Lab1` …
-`NLP_Lab8` and consolidated into this single repository.
+`NLP_Lab9` and consolidated into this single repository.
 
 | Folder | Notebook | Status |
 |---|---|---|
@@ -14,8 +14,9 @@ Natural Language Processing (ARTI 501), cloned from `github.com/MohammedMosuily/
 | `NLP_Lab6` | Deep learning for NLP | done |
 | `NLP_Lab7` | Large language models | done |
 | `NLP_Lab8` | Part of speech tagging | done |
+| `NLP_Lab9` | Named entity recognition | done |
 
-All 141 code cells run with no errors, and the outputs in the notebooks are from real executions,
+All 150 code cells run with no errors, and the outputs in the notebooks are from real executions,
 not transcribed.
 
 ## Running them
@@ -38,12 +39,12 @@ Python 3.13, not 3.14: **gensim cannot build on 3.14** — the Cython C it ships
 To re-run everything without a browser:
 
 ```powershell
-.venv\Scripts\python.exe tools\run_notebooks.py      # all eight, in order
+.venv\Scripts\python.exe tools\run_notebooks.py      # all nine, in order
 .venv\Scripts\python.exe tools\check_notebooks.py    # verify, without executing
 ```
 
 Lab 4 lemmatises 30,000 reviews and Lab 5 trains Word2Vec on 158,000 Simpsons lines, so those two
-take a few minutes each. The other six finish in under a minute.
+take a few minutes each. The other seven finish in under a minute.
 
 ### Data
 
@@ -72,6 +73,7 @@ already saved, so they read correctly offline; only re-running requires the netw
 | 6 | Task 2 as specified scores **0.500** — chance. Diagnosed below |
 | 7 | distilBERT: `NEGATIVE` 0.9997 on "The lecture was difficult to understand." FLAN-T5 summarises |
 | 8 | `play` → `VERB`/`VB`; `google` → `NNP` vs `VB`; `table` → `NN` vs `VB` |
+| 9 | `Bcd LLC` missed entirely; `Abc & Co.` span swallowed "between". Corrected: 2 `ORG`, 1 `PERSON` |
 
 Lab 3's MLE perplexity is `inf` on purpose: 8,156 of 23,798 held-out bigrams were never seen in
 training, and one unseen bigram makes an unsmoothed MLE return infinity. The notebook repeats the
@@ -99,6 +101,19 @@ points the same way, so there is nothing to classify.
 The notebook lists three fixes in order of how much they would help. The headline one: embeddings
 need a corpus orders of magnitude larger than 800 short reviews.
 
+## Lab 9's custom model, same story at a smaller scale
+
+Task 3 says train an NER model on one annotated sentence for 20 iterations, save it, and use it.
+Doing exactly that gives a model that scores perfectly on that sentence and recognises nothing
+anywhere else — handed "Apple Inc. was founded by Steve Jobs in Cupertino, California", it returns
+`Inc.` as an organisation and `California` as a product. That is not a bug in the training loop; one
+example plus a blank pipeline is all it has.
+
+The notebook shows the one-line change: the same 20 iterations started from `en_core_web_sm` keep
+proper names, places and dates. It still degrades — `Aramco` and `Dhahran` come back as `PRODUCT`,
+because 20 passes over a single example drag the weights hard toward the new labels. Real NER
+training uses hundreds of annotated spans and stops before it forgets.
+
 ## Defects found in the lab material
 
 Fixed, because the notebooks do not run outside Colab otherwise. Each one is flagged in place.
@@ -116,22 +131,27 @@ Fixed, because the notebooks do not run outside Colab otherwise. Each one is fla
 7. Lab 2 — `#nltk.download('wordnet')` commented out; the lemmatizer below it needs it.
 8. Labs 1, 2, 7 — `!pip install X`. The `!` escape runs whatever `pip` is first on `PATH`, i.e. a
    *different* interpreter from the running kernel. Changed to `%pip`, which targets the kernel.
+9. Lab 9 — `spacy.load("custom_ner_model")` in the visualization cell, but no such folder ships in
+   the repo, and the cell runs *before* Task 3 trains one. The training step it assumes was missing.
 
 **Ran, but silently produced wrong results**
 
-9. Lab 6 — `df["review"] = df["review"].apply(preprocess_text)` was indented *inside* the function,
-   after the `return`. It never ran, so every downstream cell worked on raw review text.
-10. Lab 6 — the markdown says `stratify=y` keeps the class balance across the split. The call did not
+10. Lab 6 — `df["review"] = df["review"].apply(preprocess_text)` was indented *inside* the function,
+    after the `return`. It never ran, so every downstream cell worked on raw review text.
+11. Lab 6 — the markdown says `stratify=y` keeps the class balance across the split. The call did not
     pass `stratify`.
-11. Lab 6 — `torch.FloatTensor(y_train.values)`. Under pandas copy-on-write that array is read-only,
+12. Lab 6 — `torch.FloatTensor(y_train.values)`. Under pandas copy-on-write that array is read-only,
     and torch warns it is undefined behaviour because the optimizer writes back into the same memory.
     Same problem in the TF-IDF tensor conversion.
-12. Lab 3 — `lm.perplexity(...)` wants a flat sequence of ngram tuples, not a list of sentences.
+13. Lab 3 — `lm.perplexity(...)` wants a flat sequence of ngram tuples, not a list of sentences.
     Passing nested lists silently returns `inf`.
 
 **Not bugs, but worth knowing**
 
 - **Lab 7 has no Task 4.** It goes Task 1, Task 2, Task 3, Task 5.
+- **Lab 9's Task 3 is numbered 1, 2, 3, 5** — no step 4 either.
+- Lab 9's Task 2 asks for entities that were "not identified". The model misses `Bcd LLC` outright
+  *and* anchors `Abc & Co.` on "between", dropping the closing quote. Both are fixed.
 - Lab 5's Task 5 list is numbered 1, 3, 4.
 - Lab 3 asks for "the perplexity of the word (pakistan)". Perplexity is defined for a *sequence*, so
   the honest reading is `1/P(pakistan)` = 162.3. Both that and the bigram value are shown.
