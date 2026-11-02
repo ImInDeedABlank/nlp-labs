@@ -1,6 +1,6 @@
-"""Execute the nine lab notebooks headlessly, keeping the outputs.
+"""Execute the eleven lab notebooks headlessly, keeping the outputs.
 
-    python tools/run_notebooks.py              # all nine, in order
+    python tools/run_notebooks.py              # all eleven, in order
     python tools/run_notebooks.py NLP_Lab5     # just one
 
 Run it with the environment's own interpreter, e.g.
@@ -22,11 +22,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-# Lab 4 lemmatises 30k reviews and Lab 5 trains Word2Vec on 158k Simpsons lines,
-# so those two need room. The rest finish in under a minute.
-TIMEOUTS = {"NLP_Lab7": 3600, "NLP_Lab5": 3600, "NLP_Lab3": 2400, "NLP_Lab4": 2400}
+# Lab 4 lemmatises 30k reviews, Lab 5 trains Word2Vec on 158k Simpsons lines, and
+# Lab 10 trains a translation model for 12 epochs, so those need room. The rest
+# finish in under a minute.
+TIMEOUTS = {"NLP_Lab10": 3600, "NLP_Lab7": 3600, "NLP_Lab5": 3600,
+            "NLP_Lab3": 2400, "NLP_Lab4": 2400}
 
-wanted = sys.argv[1:] or [f"NLP_Lab{i}" for i in range(1, 10)]
+wanted = sys.argv[1:] or [f"NLP_Lab{i}" for i in range(1, 12)]
 
 failed = 0
 for lab in wanted:
