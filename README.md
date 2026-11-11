@@ -1,8 +1,8 @@
 # NLP labs — ARTI 501
 
-Eleven lab notebooks with every task cell filled in and executed. These are the labs from
-Natural Language Processing (ARTI 501), cloned from `github.com/MohammedMosuily/NLP_Lab1` …
-`NLP_Lab11` and consolidated into this single repository.
+Twelve lab notebooks with every task cell filled in and executed. These are the labs from Natural
+Language Processing (ARTI 501), cloned from `github.com/MohammedMosuily/NLP_Lab1` … `NLP_Lab12` and
+consolidated into this single repository.
 
 | Folder | Notebook | Status |
 |---|---|---|
@@ -17,8 +17,9 @@ Natural Language Processing (ARTI 501), cloned from `github.com/MohammedMosuily/
 | `NLP_Lab9` | Named entity recognition | done |
 | `NLP_Lab10` | Introduction to machine translation | done |
 | `NLP_Lab11` | Attention with RNNs | done |
+| `NLP_Lab12` | Transformers | done |
 
-All 168 code cells run with no errors, and the outputs in the notebooks are from real executions,
+All 177 code cells run with no errors, and the outputs in the notebooks are from real executions,
 not transcribed.
 
 ## Running them
@@ -46,19 +47,20 @@ the CPU. It takes about six minutes.
 To re-run everything without a browser:
 
 ```powershell
-.venv\Scripts\python.exe tools\run_notebooks.py      # all eleven, in order
+.venv\Scripts\python.exe tools\run_notebooks.py      # all twelve, in order
 .venv\Scripts\python.exe tools\check_notebooks.py    # verify, without executing
 ```
 
 Lab 4 lemmatises 30,000 reviews, Lab 5 trains Word2Vec on 158,000 Simpsons lines, and Lab 10 trains
-a translation model for twelve epochs, so those three take a few minutes each. The other eight
-finish in under a minute.
+a translation model for twelve epochs, so those three take a few minutes each. The other nine finish
+in under a minute once their models are on disk.
 
 ### Data
 
 Datasets download themselves on first run via `kagglehub`, into `~/.cache/kagglehub`. Lab 5, Lab 6
 and Lab 11 ship their data in-repo. The three Hugging Face models Lab 7 uses are pulled on first run
-into `~/.cache/huggingface`.
+into `~/.cache/huggingface`, and so is the sentiment DistilBERT the Lab 12 handout loads; Lab 12's
+task pulls `bert-base-uncased`, about 440 MB.
 
 There is no `kaggle.json` and no API token here, and none is needed: kagglehub fetches
 **unrestricted public** datasets anonymously. All six datasets used are in that category. That is a
@@ -84,6 +86,7 @@ already saved, so they read correctly offline; only re-running requires the netw
 | 9 | `Bcd LLC` missed entirely; `Abc & Co.` span swallowed "between". Corrected: 2 `ORG`, 1 `PERSON` |
 | 10 | 175,621 pairs → 45,000 training pairs, 12 epochs: BLEU **0.09**, exact match **0.000**. Fluent syntax, wrong content words |
 | 11 | The shipped model cannot even fit its 168 questions (accuracy 0.381) — its RNN reads the *batch* axis. Fixed: 1.000 seen, 0.588 unseen |
+| 12 | 12 layers × 12 heads = **144**. Layer 3, head 2 is 11 × 11; its `[CLS]` column collects 4.41 of 11, and `transformers`→`[CLS]` 0.89 is not `[CLS]`→`transformers` 0.008 |
 
 Lab 3's MLE perplexity is `inf` on purpose: 8,156 of 23,798 held-out bigrams were never seen in
 training, and one unseen bigram makes an unsmoothed MLE return infinity. The notebook repeats the
@@ -138,6 +141,41 @@ while a paraphrase pair ("who created you?" / "who built you?") attends to the s
 (the verb) with a different string each time. The notebook's answer to Task 2 is that attention
 routes each question separately; it does not carry meaning across paraphrases, so it cannot be
 shipped as an explanation.
+
+## Lab 12: reading a frozen model's attention
+
+Lab 12 is the only lab with nothing to train. It loads DistilBERT for sentiment, then asks for the
+architecture of `bert-base-uncased` and the attention weights of layer 3, head 2. No dataset, no
+epochs, no metric — the deliverable is four numbers and an explanation, and the whole notebook runs
+in about twenty seconds on the CPU.
+
+| | DistilBERT (handout) | BERT-base (task) |
+|---|---|---|
+| Layers | 6 | 12 |
+| Heads per layer | 12 | 12 |
+| Heads in total | 72 | **144** |
+| Parameters | 67M | 109M |
+
+The sentence tokenises into **11 positions**, not the 9 words a human counts: `self-attention` splits
+into `self`, `-`, `attention`, and `[CLS]`/`[SEP]` are positions too. So the matrix is 11 × 11, and
+every "word" question about it is really a token question.
+
+That head, on that sentence, is mostly parked on `[CLS]`:
+
+- The `[CLS]` **column** sums to **4.41** of the 11 units the rows distribute — 40% of the head's
+  weight goes to a position that carries no word. Six of the eleven rows put their maximum there.
+- The matrix is **not symmetric**: `transformers`→`[CLS]` is 0.889, while `[CLS]`→`transformers` is
+  0.008. Read a row and a column the same way and the conclusion inverts.
+- Where it does read words, it reads locally: `to`→`use` 0.62, `attention`→`transformers` 0.54,
+  `-`→`self` 0.64. `language`, the object of the sentence, collects the *least* attention of any
+  content token (0.14).
+
+The answer the notebook gives to Task 4 is the mechanism, not the morality tale: a row is a softmax
+over the columns, so it is a budget of 1.0 spent on 11 key positions, and a column is how much
+influence a token carries. That is a description of **routing**. It is not an explanation of the
+output, for the reason Lab 11 ran into from the other direction: one head of 144, 64 dimensions wide,
+and no intervention that shows the weight caused anything. A `[CLS]` sink is the cleanest evidence
+that a high weight can mean nothing at all.
 
 ## Lab 6 doesn't work, and that's the interesting part
 
@@ -229,6 +267,13 @@ Fixed, because the notebooks do not run outside Colab otherwise. Each one is fla
 - Lab 11's 12 answer groups are exactly balanced at 14 questions each, so the majority baseline is
   1/12 on a balanced split.
 - Lab 5's Task 5 list is numbered 1, 3, 4.
+- **Lab 12 is the only handout that runs unmodified** — no Colab paths, no missing imports, no
+  dataset. It needs `attn_implementation="eager"` on transformers 5.x, because the default `sdpa`
+  backend cannot return weights, and the task cell sets it.
+- Lab 12's task says "print the number of Transformer layers" and the pattern directly above it is
+  `model.config.n_layers`. That attribute is DistilBERT's; `BertConfig` calls the same things
+  `num_hidden_layers` / `num_attention_heads` / `hidden_size`, so reusing the line raises
+  `AttributeError`. The task cell names the right ones.
 - Lab 3 asks for "the perplexity of the word (pakistan)". Perplexity is defined for a *sequence*, so
   the honest reading is `1/P(pakistan)` = 162.3. Both that and the bigram value are shown.
 - Lab 1's `dataset/README.md` points at a SharePoint folder with no data in it. Lab 1's own task is

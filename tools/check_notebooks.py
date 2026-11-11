@@ -1,4 +1,4 @@
-"""Sanity-check the eleven lab notebooks without executing them.
+"""Sanity-check the twelve lab notebooks without executing them.
 
 Checks, for every cell:
   - every code cell compiles (ignoring IPython-only lines: %magic, !shell, `name?`)
@@ -66,5 +66,5 @@ for p in sorted(glob.glob(os.path.join(ROOT, "NLP_Lab*", "*.ipynb"))):
     for problem in problems:
         print(f"    {problem}")
 
-print(f"\n{11 - bad}/11 notebooks clean")
+print(f"\n{12 - bad}/12 notebooks clean")
 sys.exit(1 if bad else 0)
