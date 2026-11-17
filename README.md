@@ -1,8 +1,9 @@
 # NLP labs — ARTI 501
 
-Twelve lab notebooks with every task cell filled in and executed. These are the labs from Natural
-Language Processing (ARTI 501), cloned from `github.com/MohammedMosuily/NLP_Lab1` … `NLP_Lab12` and
-consolidated into this single repository.
+Thirteen lab folders — fourteen notebooks — with every task cell filled in and executed. These are
+the labs from Natural Language Processing (ARTI 501), cloned from
+`github.com/MohammedMosuily/NLP_Lab1` … `NLP_Lab13` and consolidated into this single repository.
+Lab 13 is the one handout split across two notebooks, Part 1 and Part 2; both live in `NLP_Lab13`.
 
 | Folder | Notebook | Status |
 |---|---|---|
@@ -18,8 +19,9 @@ consolidated into this single repository.
 | `NLP_Lab10` | Introduction to machine translation | done |
 | `NLP_Lab11` | Attention with RNNs | done |
 | `NLP_Lab12` | Transformers | done |
+| `NLP_Lab13` | Information retrieval for RAG (Parts 1 and 2) | done |
 
-All 177 code cells run with no errors, and the outputs in the notebooks are from real executions,
+All 190 code cells run with no errors, and the outputs in the notebooks are from real executions,
 not transcribed.
 
 ## Running them
@@ -47,20 +49,22 @@ the CPU. It takes about six minutes.
 To re-run everything without a browser:
 
 ```powershell
-.venv\Scripts\python.exe tools\run_notebooks.py      # all twelve, in order
+.venv\Scripts\python.exe tools\run_notebooks.py      # all thirteen, in order
 .venv\Scripts\python.exe tools\check_notebooks.py    # verify, without executing
 ```
 
 Lab 4 lemmatises 30,000 reviews, Lab 5 trains Word2Vec on 158,000 Simpsons lines, and Lab 10 trains
-a translation model for twelve epochs, so those three take a few minutes each. The other nine finish
-in under a minute once their models are on disk.
+a translation model for twelve epochs, so those three take a few minutes each. The other ten finish
+in under a minute once their models are on disk — Lab 13's two notebooks take about five seconds
+each, and the pair is executed in file-name order.
 
 ### Data
 
 Datasets download themselves on first run via `kagglehub`, into `~/.cache/kagglehub`. Lab 5, Lab 6
 and Lab 11 ship their data in-repo. The three Hugging Face models Lab 7 uses are pulled on first run
 into `~/.cache/huggingface`, and so is the sentiment DistilBERT the Lab 12 handout loads; Lab 12's
-task pulls `bert-base-uncased`, about 440 MB.
+task pulls `bert-base-uncased`, about 440 MB. Lab 13 has no data at all — its six-document corpus
+is six strings defined in the notebook.
 
 There is no `kaggle.json` and no API token here, and none is needed: kagglehub fetches
 **unrestricted public** datasets anonymously. All six datasets used are in that category. That is a
@@ -87,6 +91,7 @@ already saved, so they read correctly offline; only re-running requires the netw
 | 10 | 175,621 pairs → 45,000 training pairs, 12 epochs: BLEU **0.09**, exact match **0.000**. Fluent syntax, wrong content words |
 | 11 | The shipped model cannot even fit its 168 questions (accuracy 0.381) — its RNN reads the *batch* axis. Fixed: 1.000 seen, 0.588 unseen |
 | 12 | 12 layers × 12 heads = **144**. Layer 3, head 2 is 11 × 11; its `[CLS]` column collects 4.41 of 11, and `transformers`→`[CLS]` 0.89 is not `[CLS]`→`transformers` 0.008 |
+| 13 | "named entity recognition" → document 3 at **0.625**, the only non-zero of six. "document representation" → six zeros, because neither token is in the vocabulary; `k` only changes how many zero-score rows come back |
 
 Lab 3's MLE perplexity is `inf` on purpose: 8,156 of 23,798 held-out bigrams were never seen in
 training, and one unseen bigram makes an unsmoothed MLE return infinity. The notebook repeats the
@@ -177,6 +182,40 @@ output, for the reason Lab 11 ran into from the other direction: one head of 144
 and no intervention that shows the weight caused anything. A `[CLS]` sink is the cleanest evidence
 that a high weight can mean nothing at all.
 
+## Lab 13: TF-IDF ranks what it cannot match
+
+Lab 13 comes as two notebooks — Part 1 builds the retrieval pipeline, Part 2 wraps it in a function
+and asks what the ranking actually means. The corpus is six sentences, the vocabulary is 39 terms,
+and nothing is downloaded or trained; both notebooks run in about five seconds.
+
+Part 1 gets the easy case right. *"How do transformers understand words?"* returns document 0 at
+**0.633** and document 2 at 0.173, and the top-3 loop then prints a third document at **0.000**
+anyway — the first sign that the loop returns the top `k` rows, not the rows that matched.
+
+Exercise 1 is the clean case: *"named entity recognition"* pulls document 3 at **0.625**, the only
+document holding `named`, `entity` and `recognition`; the other five score zero. The two rows after
+it are padding, and their order is a tie-break artifact of `argsort()`, not relevance.
+
+Exercise 2 is the one worth reading. *"document representation"* scores **0.000 against all six
+documents**, because the query analyses to `document` and `representation` while the corpus holds
+`documents`, `representations` and `represents`. `TfidfVectorizer` does not stem. So `k=1` returns
+document 5 and `k=3` returns documents 5, 4 and 3 — all at 0.000. Raising `k` changed how many
+rows were printed, not how many were relevant, which is exactly the confusion the lab is built to
+expose.
+
+Practice 2 makes the same point from the other side. Appending *"BERT is a transformer model that
+uses bidirectional context."* and refitting takes the matrix from **6 × 39** to **7 × 45**, and the
+new document ranks first at **0.408**. Rebuilding is not optional: `fit_transform` fixes the
+vocabulary, the IDF weights and the row-to-document mapping, and `transform` drops unseen terms
+without an error, so against the old matrix the query vector would be all zeros. Even after the
+rebuild document 0 — the one about transformers — still scores **0.000**, because the query token
+is `transformer` and the document's token is `transformers`.
+
+That is the honest summary of sparse retrieval: it is a lexical filter. It rewards exact
+vocabulary overlap and cannot bridge a plural, a stem or a synonym. For RAG that is half a
+retriever; the missing half is dense embeddings, which Part 2 names but deliberately does not
+build.
+
 ## Lab 6 doesn't work, and that's the interesting part
 
 The task says train a network on averaged Word2Vec vectors, with `BCEWithLogitsLoss`, Adam at
@@ -234,6 +273,9 @@ Fixed, because the notebooks do not run outside Colab otherwise. Each one is fla
 10. Lab 11 — `from google.colab import files` (Colab-only, and unused: the path below is hardcoded).
 11. Lab 11 — `pd.read_csv("/content/Lab_11_QnA_Dataset_Download.csv")`. Colab-only path; the file
     ships as `NLP_Lab11/dataset/Lab_11_QnA_Dataset.csv`.
+12. Lab 13 — Part 1's exercises say "use `search()`", but Part 1 never defines it: it only ranks
+    inline in section 5, with `k = 3` hard-coded, and the function itself lives in Part 2. Part 1
+    now defines the same function, so the exercises run on their own.
 
 **Ran, but silently produced wrong results**
 
@@ -267,9 +309,16 @@ Fixed, because the notebooks do not run outside Colab otherwise. Each one is fla
 - Lab 11's 12 answer groups are exactly balanced at 14 questions each, so the majority baseline is
   1/12 on a balanced split.
 - Lab 5's Task 5 list is numbered 1, 3, 4.
-- **Lab 12 is the only handout that runs unmodified** — no Colab paths, no missing imports, no
-  dataset. It needs `attn_implementation="eager"` on transformers 5.x, because the default `sdpa`
+- **Lab 12 is the only handout whose cells all run unmodified** — no Colab paths, no missing
+  imports, no dataset. (Lab 13 ships no Colab path or dataset either, but its Part 1 exercises call
+  a function the notebook never defines; see defect 12.) It needs
+  `attn_implementation="eager"` on transformers 5.x, because the default `sdpa`
   backend cannot return weights, and the task cell sets it.
+- **Lab 13 ships as two notebooks** in one folder, Part 1 and Part 2. `tools\run_notebooks.py` now
+  executes every notebook in a lab folder, in file-name order, each in its own kernel.
+- Lab 13's top-k loop prints zero-score documents as results (`Rank 3 | Score: 0.000`). That is the
+  lesson, not a bug: the notebook explains the tie-break and Part 2's `search_filtered()` drops
+  those rows. Both practice cells that the handout left as stubs are filled in.
 - Lab 12's task says "print the number of Transformer layers" and the pattern directly above it is
   `model.config.n_layers`. That attribute is DistilBERT's; `BertConfig` calls the same things
   `num_hidden_layers` / `num_attention_heads` / `hidden_size`, so reusing the line raises

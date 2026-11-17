@@ -1,4 +1,4 @@
-"""Sanity-check the twelve lab notebooks without executing them.
+"""Sanity-check the lab notebooks without executing them.
 
 Checks, for every cell:
   - every code cell compiles (ignoring IPython-only lines: %magic, !shell, `name?`)
@@ -56,15 +56,23 @@ def check(path):
     return cells, problems
 
 
+paths = sorted(glob.glob(os.path.join(ROOT, "NLP_Lab*", "*.ipynb")))
+per_lab = {}
+for p in paths:
+    per_lab.setdefault(os.path.dirname(p), []).append(p)
+
 bad = 0
-for p in sorted(glob.glob(os.path.join(ROOT, "NLP_Lab*", "*.ipynb"))):
+total = 0
+for p in paths:
     lab = os.path.basename(os.path.dirname(p))
+    label = lab if len(per_lab[os.path.dirname(p)]) == 1 else f"{lab}/{os.path.basename(p)}"
+    total += 1
     cells, problems = check(p)
     code = sum(1 for c in cells if c["cell_type"] == "code")
     bad += 1 if problems else 0
-    print(f"{lab:<10} {'OK ' if not problems else 'BAD'}  {len(cells):>3} cells ({code} code)")
+    print(f"{label:<52} {'OK ' if not problems else 'BAD'}  {len(cells):>3} cells ({code} code)")
     for problem in problems:
         print(f"    {problem}")
 
-print(f"\n{12 - bad}/12 notebooks clean")
+print(f"\n{total - bad}/{total} notebooks clean")
 sys.exit(1 if bad else 0)

@@ -1,7 +1,11 @@
-"""Execute the twelve lab notebooks headlessly, keeping the outputs.
+"""Execute the lab notebooks headlessly, keeping the outputs.
 
-    python tools/run_notebooks.py              # all twelve, in order
+    python tools/run_notebooks.py              # all thirteen labs, in order
     python tools/run_notebooks.py NLP_Lab5     # just one
+
+A lab is one folder and may hold more than one notebook (Lab 13 ships two
+parts); every notebook in the folder is executed in file-name order, each in
+its own fresh kernel.
 
 Run it with the environment's own interpreter, e.g.
     .venv\\Scripts\\python.exe tools\\run_notebooks.py
@@ -29,39 +33,41 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 TIMEOUTS = {"NLP_Lab10": 3600, "NLP_Lab7": 3600, "NLP_Lab5": 3600,
             "NLP_Lab3": 2400, "NLP_Lab4": 2400, "NLP_Lab12": 1800}
 
-wanted = sys.argv[1:] or [f"NLP_Lab{i}" for i in range(1, 13)]
+wanted = sys.argv[1:] or [f"NLP_Lab{i}" for i in range(1, 14)]
 
 failed = 0
 for lab in wanted:
-    hits = glob.glob(os.path.join(ROOT, lab, "*.ipynb"))
-    if len(hits) != 1:
-        print(f"{lab:<10} SKIPPED: expected exactly one .ipynb, found {len(hits)}")
+    hits = sorted(glob.glob(os.path.join(ROOT, lab, "*.ipynb")))
+    if not hits:
+        print(f"{lab:<10} SKIPPED: no .ipynb found")
         failed += 1
         continue
-    path = hits[0]
 
-    nb = nbformat.read(path, as_version=4)
-    started = time.time()
-    client = NotebookClient(
-        nb,
-        timeout=TIMEOUTS.get(lab, 900),
-        kernel_name="nlp-labs",
-        allow_errors=False,
-        resources={"metadata": {"path": os.path.dirname(path)}},
-    )
-    try:
-        client.execute()
-        status = "OK"
-    except Exception as exc:
-        status = f"FAILED: {type(exc).__name__}: {str(exc)[:300]}"
-        failed += 1
-        traceback.print_exc(limit=2)
+    for path in hits:
+        name = lab if len(hits) == 1 else f"{lab}/{os.path.basename(path)}"
 
-    nbformat.write(nb, path)
-    errors = [i for i, c in enumerate(nb.cells)
-              if c.cell_type == "code"
-              and any(o.get("output_type") == "error" for o in c.get("outputs", []))]
-    print(f"{lab:<10} {status:<12} {time.time() - started:7.1f}s  errors in cells: {errors}",
-          flush=True)
+        nb = nbformat.read(path, as_version=4)
+        started = time.time()
+        client = NotebookClient(
+            nb,
+            timeout=TIMEOUTS.get(lab, 900),
+            kernel_name="nlp-labs",
+            allow_errors=False,
+            resources={"metadata": {"path": os.path.dirname(path)}},
+        )
+        try:
+            client.execute()
+            status = "OK"
+        except Exception as exc:
+            status = f"FAILED: {type(exc).__name__}: {str(exc)[:300]}"
+            failed += 1
+            traceback.print_exc(limit=2)
+
+        nbformat.write(nb, path)
+        errors = [i for i, c in enumerate(nb.cells)
+                  if c.cell_type == "code"
+                  and any(o.get("output_type") == "error" for o in c.get("outputs", []))]
+        print(f"{name:<30} {status:<12} {time.time() - started:7.1f}s  errors in cells: {errors}",
+              flush=True)
 
 sys.exit(1 if failed else 0)
